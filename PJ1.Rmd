@@ -1,0 +1,109 @@
+---
+title: "Student Performance Analysis"
+author: "Sri Darahas Koneru"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(corrplot)
+library(Metrics)
+```
+
+## Introduction
+
+This project analyzes the Student Performance dataset from the UCI Machine Learning Repository. 
+We explore how demographic, social, and academic factors impact final grades, focusing on G3 (final math grade).
+
+## Dataset Description
+
+The dataset (`student-mat.csv`) contains 395 rows and 33 variables. Key variables include:
+
+- `G1`, `G2`, `G3`: Grades in 3 periods (0–20)
+- `studytime`: Weekly study time (1–4)
+- `failures`: Number of past class failures
+- `Medu`, `Fedu`: Mother's and father's education level
+- `goout`: Going out with friends (1–5)
+- `Dalc`, `Walc`: Alcohol consumption (1–5)
+
+```{r load-data}
+data <- read.csv("student-mat.csv", sep = ";")
+str(data)
+summary(data)
+```
+
+## Data Cleaning
+
+```{r}
+sum(is.na(data))
+data <- data %>% mutate_if(is.character, as.factor)
+```
+
+## Exploratory Data Analysis
+
+### Final Grade Distribution
+```{r}
+ggplot(data, aes(x = G3)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Final Grades", x = "G3", y = "Count")
+```
+
+### Study Time vs Final Grade
+```{r}
+ggplot(data, aes(x = factor(studytime), y = G3)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Study Time vs Final Grade", x = "Study Time", y = "G3")
+```
+
+### Correlation Matrix
+```{r correlation-matrix}
+numeric_data <- select_if(data, is.numeric)
+cor_matrix <- cor(numeric_data)
+corrplot(cor_matrix, method = "color")
+```
+
+## Modeling (Machine Learning Enhancements)
+
+### Train/Test Split
+```{r split-data}
+set.seed(123)
+n <- nrow(data)
+train_index <- sample(1:n, 0.8 * n)
+train <- data[train_index, ]
+test <- data[-train_index, ]
+```
+
+### Train Linear Regression Model
+```{r model-train}
+model <- lm(G3 ~ studytime + failures + Medu + Fedu, data = train)
+summary(model)
+```
+
+### Predict and Evaluate Model
+```{r predict-evaluate}
+predictions <- predict(model, newdata = test)
+rmse_val <- rmse(test$G3, predictions)
+r2_val <- 1 - sum((predictions - test$G3)^2) / sum((mean(train$G3) - test$G3)^2)
+
+rmse_val
+r2_val
+```
+
+### Actual vs Predicted Plot
+```{r prediction-plot}
+ggplot(data.frame(actual = test$G3, predicted = predictions), aes(x = actual, y = predicted)) +
+  geom_point(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Actual vs Predicted Final Grades", x = "Actual G3", y = "Predicted G3")
+```
+
+## Conclusion
+
+Higher study time and parent education are linked to better grades.
+
+More past failures hurt final scores.
+
+A simple regression model gives a good early insight into academic predictors.
+
+Adding model evaluation metrics (RMSE, R²) and a prediction plot strengthens the analysis and better reflects real-world predictive modeling workflows.
